@@ -1,46 +1,28 @@
 {
-  "name": "straur-system",
+  "name": "straur-systeme",
   "version": "1.0.0",
-  "description": "STraur - Système de Gestion Intelligent de Transport Urbain",
-  "keywords": [
-    "transport",
-    "urban",
-    "bus",
-    "mobile",
-    "real-time",
-    "nestjs",
-    "react-native"
-  ],
+  "description": "STraur - Système de gestion intelligent de transport urbain",
   "author": "STraur Team",
   "license": "MIT",
-  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../mobile && npm install && cd ../web-admin && npm install && cd ../terminal-pwa && npm install",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:mobile": "cd mobile && npm start",
+    "dev:admin": "cd web-admin && npm start",
+    "dev:terminal": "cd terminal-pwa && npm start",
+    "build:backend": "cd backend && npm run build",
+    "build:mobile": "cd mobile && eas build --platform ios android",
+    "build:admin": "cd web-admin && npm run build",
+    "build:terminal": "cd terminal-pwa && npm run build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "db:seed": "cd backend && npm run prisma:seed"
+  },
   "workspaces": [
     "backend",
     "mobile",
     "web-admin",
     "terminal-pwa"
-  ],
-  "scripts": {
-    "install:all": "npm install && npm install --workspace=backend && npm install --workspace=mobile && npm install --workspace=web-admin && npm install --workspace=terminal-pwa",
-    "dev:all": "concurrently npm:dev:backend npm:dev:mobile npm:dev:admin npm:dev:terminal",
-    "dev:backend": "npm run start:dev --workspace=backend",
-    "dev:mobile": "npm start --workspace=mobile",
-    "dev:admin": "npm start --workspace=web-admin",
-    "dev:terminal": "npm start --workspace=terminal-pwa",
-    "build:all": "npm run build --workspace=backend && npm run build --workspace=mobile && npm run build --workspace=web-admin && npm run build --workspace=terminal-pwa",
-    "build:backend": "npm run build --workspace=backend",
-    "build:mobile": "npm run build --workspace=mobile",
-    "build:admin": "npm run build --workspace=web-admin",
-    "build:terminal": "npm run build --workspace=terminal-pwa",
-    "test:all": "npm run test --workspace=backend && npm run test --workspace=web-admin",
-    "lint:all": "npm run lint --workspace=backend && npm run lint --workspace=web-admin",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:reset": "docker-compose down -v && docker-compose up -d"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.0"
-  }
+  ]
 }
