@@ -1,0 +1,316 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserRole {
+  PASSAGER
+  CONDUCTEUR
+  ADMIN
+  CONTROLEUR
+}
+
+enum LigneStatut {
+  ACTIVE
+  INACTIVE
+}
+
+enum BusStatut {
+  EN_SERVICE
+  HORS_SERVICE
+  EN_PAUSE
+}
+
+enum ReservationStatut {
+  EN_ATTENTE
+  CONFIRMÉE
+  VALIDÉE
+  ANNULÉE
+}
+
+enum TransactionType {
+  PAIEMENT
+  REMBOURSEMENT
+  BONUS_FIDELITE
+}
+
+enum TransactionStatut {
+  EN_ATTENTE
+  RÉUSSIE
+  ÉCHOUÉE
+}
+
+enum PaymentOperator {
+  MTN
+  ORANGE
+}
+
+enum NotificationType {
+  INFO
+  ALERT
+  PROMOTION
+}
+
+enum PartageStatut {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// =====================================================
+// ENTITIES
+// =====================================================
+
+/// Utilisateurs du système
+model User {
+  id                String    @id @default(cuid())
+  nom               String
+  prenom            String
+  telephone         String    @unique
+  email             String    @unique
+  motDePasse        String
+  role              UserRole  @default(PASSAGER)
+  walletSolde       Decimal   @default(0) @db.Decimal(10, 2)
+  pointsFidelite    Int       @default(0)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  reservations      Reservation[]
+  transactions      Transaction[]
+  trajetsFavoris    TrajetFavori[]
+  partageInities    PartageTrajet[] @relation("proprietaire")
+  beneficiaries     PartageTrajet[] @relation("beneficiaire")
+  notifications     Notification[]
+  buses             Bus[] @relation("conducteur")
+
+  @@index([role])
+  @@index([telephone])
+  @@index([email])
+}
+
+/// Lignes de transport
+model Ligne {
+  id          String      @id @default(cuid())
+  nom         String      @unique
+  description String?
+  couleur     String      @default("#000000") // hex color
+  statut      LigneStatut @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  arrets      Arret[]
+  buses       Bus[]
+  horaires    Horaire[]
+  reservations Reservation[]
+  trajetsFavoris TrajetFavori[]
+
+  @@index([statut])
+}
+
+/// Arrêts de bus
+model Arret {
+  id          String   @id @default(cuid())
+  nom         String
+  latitude    Decimal  @db.Decimal(10, 8)
+  longitude   Decimal  @db.Decimal(11, 8)
+  ligneId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ligne       Ligne    @relation(fields: [ligneId], references: [id], onDelete: Cascade)
+  monteeReservations   Reservation[] @relation("arretMontee")
+  descenteReservations Reservation[] @relation("arretDescente")
+  monteesFavoris      TrajetFavori[] @relation("arretMontee")
+  descentesFavoris    TrajetFavori[] @relation("arretDescente")
+
+  @@index([ligneId])
+  @@index([latitude, longitude])
+}
+
+/// Bus de la flotte
+model Bus {
+  id                  String    @id @default(cuid())
+  immatriculation     String    @unique
+  ligneId             String
+  conducteurId        String?
+  statut              BusStatut @default(EN_SERVICE)
+  latitudeActuelle    Decimal   @db.Decimal(10, 8)
+  longitudeActuelle   Decimal   @db.Decimal(11, 8)
+  capacitePassagers   Int       @default(40)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  ligne               Ligne     @relation(fields: [ligneId], references: [id], onDelete: Cascade)
+  conducteur          User?     @relation("conducteur", fields: [conducteurId], references: [id], onDelete: SetNull)
+
+  @@index([ligneId])
+  @@index([conducteurId])
+  @@index([statut])
+  @@index([latitudeActuelle, longitudeActuelle])
+}
+
+/// Horaires de bus
+model Horaire {
+  id          String   @id @default(cuid())
+  ligneId     String
+  heureDepart String   // HH:MM format
+  heureArrivee String  // HH:MM format
+  joursActifs String   // JSON array: ["MON", "TUE", etc]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ligne       Ligne    @relation(fields: [ligneId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@index([ligneId])
+}
+
+/// Réservations de trajets
+model Reservation {
+  id                  String              @id @default(cuid())
+  userId              String
+  ligneId             String
+  arretMonteeId       String
+  arretDescenteId     String
+  horaireId           String
+  dateTrajet          DateTime
+  statut              ReservationStatut   @default(EN_ATTENTE)
+  montant             Decimal             @db.Decimal(10, 2)
+  qrCodeToken         String?             // AES-256 encrypted
+  qrCodeExpireAt      DateTime?
+  nombrePassagers     Int                 @default(1)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  // Relations
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ligne               Ligne               @relation(fields: [ligneId], references: [id], onDelete: Cascade)
+  arretMontee         Arret               @relation("arretMontee", fields: [arretMonteeId], references: [id])
+  arretDescente       Arret               @relation("arretDescente", fields: [arretDescenteId], references: [id])
+  horaire             Horaire             @relation(fields: [horaireId], references: [id])
+  transaction         Transaction?
+  partages            PartageTrajet[]
+
+  @@index([userId])
+  @@index([ligneId])
+  @@index([statut])
+  @@index([dateTrajet])
+}
+
+/// Transactions financières
+model Transaction {
+  id              String              @id @default(cuid())
+  userId          String
+  reservationId   String?             @unique
+  montant         Decimal             @db.Decimal(10, 2)
+  type            TransactionType
+  statut          TransactionStatut   @default(EN_ATTENTE)
+  operateur       PaymentOperator?
+  reference       String?             // External payment reference
+  description     String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservation     Reservation?        @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([statut])
+  @@index([type])
+  @@index([operateur])
+}
+
+/// Trajets favoris
+model TrajetFavori {
+  id              String   @id @default(cuid())
+  userId          String
+  ligneId         String
+  arretMonteeId   String
+  arretDescenteId String
+  libelle         String   // "Maison → Travail"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ligne           Ligne    @relation(fields: [ligneId], references: [id], onDelete: Cascade)
+  arretMontee     Arret    @relation("arretMontee", fields: [arretMonteeId], references: [id])
+  arretDescente   Arret    @relation("arretDescente", fields: [arretDescenteId], references: [id])
+
+  @@unique([userId, ligneId, arretMonteeId, arretDescenteId])
+  @@index([userId])
+}
+
+/// Partage de trajets
+model PartageTrajet {
+  id              String        @id @default(cuid())
+  reservationId   String
+  userIdProprietaire String      // Propriétaire de la réservation
+  beneficiaireId  String        // Bénéficiaire du partage
+  statut          PartageStatut @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  proprietaire    User          @relation("proprietaire", fields: [userIdProprietaire], references: [id], onDelete: Cascade)
+  beneficiaire    User          @relation("beneficiaire", fields: [beneficiaireId], references: [id], onDelete: Cascade)
+
+  @@unique([reservationId, beneficiaireId])
+  @@index([userIdProprietaire])
+  @@index([beneficiaireId])
+  @@index([statut])
+}
+
+/// Notifications
+model Notification {
+  id        String               @id @default(cuid())
+  userId    String
+  titre     String
+  message   String
+  type      NotificationType     @default(INFO)
+  lu        Boolean              @default(false)
+  metadata  String?              // JSON metadata
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  // Relations
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lu])
+  @@index([createdAt])
+}
+
+/// Logs QR Code pour audit
+model QrCodeLog {
+  id              String   @id @default(cuid())
+  reservationId   String
+  scannedAt       DateTime @default(now())
+  scannedBy       String   // contrôleur ID
+  result          String   // VALID | INVALID | ALREADY_SCANNED
+  metadata        String?  // JSON
+  createdAt       DateTime @default(now())
+
+  @@index([reservationId])
+  @@index([scannedAt])
+}
