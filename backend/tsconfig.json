@@ -1,0 +1,76 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2021",
+    "lib": [
+      "ES2021"
+    ],
+    "declaration": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@auth/*": [
+        "src/modules/auth/*"
+      ],
+      "@users/*": [
+        "src/modules/users/*"
+      ],
+      "@lignes/*": [
+        "src/modules/lignes/*"
+      ],
+      "@buses/*": [
+        "src/modules/buses/*"
+      ],
+      "@reservations/*": [
+        "src/modules/reservations/*"
+      ],
+      "@qrcode/*": [
+        "src/modules/qrcode/*"
+      ],
+      "@payment/*": [
+        "src/modules/payment/*"
+      ],
+      "@notifications/*": [
+        "src/modules/notifications/*"
+      ],
+      "@fidelity/*": [
+        "src/modules/fidelity/*"
+      ],
+      "@favoris/*": [
+        "src/modules/favoris/*"
+      ],
+      "@partage/*": [
+        "src/modules/partage/*"
+      ],
+      "@stats/*": [
+        "src/modules/stats/*"
+      ],
+      "@common/*": [
+        "src/common/*"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "**/*spec.ts"
+  ]
+}
